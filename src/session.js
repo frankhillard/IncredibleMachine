@@ -165,7 +165,7 @@ export function removeBody(session, body) {
     return !ids.has(aId) && !ids.has(bId);
   });
   const slot = session.inventory.find((item) => item.type === body.partType);
-  if (slot) slot.remaining += 1;
+  if (slot && !body.builderKind) slot.remaining += 1;
   return true;
 }
 

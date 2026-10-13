@@ -32,6 +32,9 @@
           <button id="hint-btn" type="button">Hint</button>
           <button id="slow" type="button">Slow</button>
           <button id="mute" type="button">Sound</button>
+          <button id="build" type="button">Build</button>
+          <button id="load-level" type="button" disabled>Load</button>
+          <button id="save-level" type="button" disabled>Save level</button>
         </div>
       </header>
       <div id="stage-wrap">
@@ -41,7 +44,11 @@
       <div id="shelf">
         <div class="shelf-label">
           <strong>Parts</strong>
-          <span>Drag onto the felt. Scroll or Q / E to rotate. Delete removes.</span>
+          <span id="shelf-help">Drag onto the felt. Scroll or Q / E to rotate. Delete removes.</span>
+        </div>
+        <div id="builder-tools" class="is-hidden">
+          <button id="layer-fixed" type="button" class="on">Fixed</button>
+          <button id="layer-player" type="button">Player</button>
         </div>
         <div id="tray"></div>
       </div>
@@ -50,6 +57,17 @@
         <div id="dots"></div>
         <button id="next" type="button">Next</button>
       </footer>
+    </div>
+    <div id="load-panel" class="is-hidden">
+      <div class="card">
+        <p class="kicker">Extra levels</p>
+        <h3>Load a level</h3>
+        <p id="load-empty">Nothing is saved in extra_levels yet.</p>
+        <div id="load-list"></div>
+        <div class="row">
+          <button id="load-cancel" type="button">Cancel</button>
+        </div>
+      </div>
     </div>
     <div id="modal" class="hidden">
       <div class="card">

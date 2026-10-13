@@ -16,7 +16,7 @@ function box(x, y, w, h, angle = 0, extra = {}) {
   };
 }
 
-function frame() {
+export function frame() {
   return [
     box(8, 270, 16, 540, 0, { style: "frame", friction: 0.45 }),
     box(952, 270, 16, 540, 0, { style: "frame", friction: 0.45 }),
@@ -184,7 +184,7 @@ const level3 = (() => {
     ],
     decors: [],
     inventory: [{ type: "spring", count: 1 }],
-    goal: contain({ maxSpeed: 700 }),
+    goal: contain({ maxSpeed: 700, hold: 0.6 }),
     solution: [{ type: "spring", x: 230, y: 468, angle: 0.32 }],
     time: 7,
   };

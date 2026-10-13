@@ -1,0 +1,122 @@
+// Saved from the level builder. Same fields as the tables in src/levels.js.
+export const level = {
+  "id": 15,
+  "name": "Level 15",
+  "hint": "Bring the ball to the end.",
+  "fixtures": [
+    {
+      "shape": "box",
+      "x": 8,
+      "y": 270,
+      "static": true,
+      "w": 16,
+      "h": 540,
+      "style": "frame",
+      "friction": 0.45,
+      "restitution": 0.04
+    },
+    {
+      "shape": "box",
+      "x": 952,
+      "y": 270,
+      "static": true,
+      "w": 16,
+      "h": 540,
+      "style": "frame",
+      "friction": 0.45,
+      "restitution": 0.04
+    },
+    {
+      "shape": "box",
+      "x": 480,
+      "y": 8,
+      "static": true,
+      "w": 960,
+      "h": 16,
+      "style": "frame",
+      "friction": 0.3,
+      "restitution": 0.04
+    },
+    {
+      "shape": "box",
+      "x": 480,
+      "y": 1100,
+      "static": true,
+      "w": 2200,
+      "h": 120,
+      "style": "frame",
+      "friction": 0.7,
+      "restitution": 0.04
+    },
+    {
+      "x": 112.53,
+      "y": 85.64,
+      "part": "ball",
+      "role": "hero"
+    },
+    {
+      "shape": "box",
+      "x": 816.85,
+      "y": 470.84,
+      "static": true,
+      "w": 180,
+      "h": 64,
+      "sensor": true,
+      "role": "goal",
+      "style": "sensor",
+      "friction": 0.4,
+      "restitution": 0.1
+    },
+    {
+      "x": 808.79,
+      "y": 510,
+      "part": "board"
+    },
+    {
+      "x": 917.55,
+      "y": 413.63,
+      "angle": 1.57,
+      "part": "board"
+    },
+    {
+      "x": 151.21,
+      "y": 161.39,
+      "angle": 0.26,
+      "part": "board"
+    }
+  ],
+  "decors": [],
+  "inventory": [
+    {
+      "type": "spring",
+      "count": 1
+    },
+    {
+      "type": "board",
+      "count": 1
+    }
+  ],
+  "goal": {
+    "type": "contain",
+    "match": "ball",
+    "zone": "goal",
+    "mode": "any",
+    "hold": 0.3,
+    "maxSpeed": 360
+  },
+  "solution": [
+    {
+      "type": "spring",
+      "x": 410.7,
+      "y": 485.35,
+      "angle": 0
+    },
+    {
+      "type": "board",
+      "x": 595.24,
+      "y": 467.62,
+      "angle": 0.26
+    }
+  ],
+  "time": 12
+};
