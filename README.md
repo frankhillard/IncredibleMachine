@@ -10,6 +10,20 @@ npm start
 
 Open [http://localhost:8080](http://localhost:8080).
 
+Find the process that is listening:
+
+```bash
+lsof -nP -iTCP:8080 -sTCP:LISTEN
+```
+
+Stop it with the pid from that listing, or with:
+
+```bash
+npm stop
+```
+
+`npm stop` locates whatever is listening on port 8080 and stops it. For another port, use `PORT=3000 npm stop` and the same port in the `lsof` command.
+
 Drag parts from the shelf onto the felt. Scroll, or press Q and E, to rotate. Press Play and see whether the machine does the job. Stop puts every part back where you set it. Hint ghosts one layout that works; it is not the only one.
 
 Build opens an empty table with every part, plus Start and End. Click Build again to return to the machines. Fixed parts are stored in the level. Player parts are given to the player, and the spots you chose are saved as the solution. Save level writes `extra_levels/level12.js`, then `level13.js`, and so on. Load lists those files and opens one back in the builder. Each file uses the same fields as the tables in `src/levels.js`.
