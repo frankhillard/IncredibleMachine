@@ -85,7 +85,48 @@ button:hover { filter: brightness(1.08); }
 button:active { transform: translateY(2px); box-shadow: 0 1px 0 #2a170e; }
 button:disabled { opacity: 0.45; cursor: default; transform: none; }
 button.go { background: #2f8a4e; box-shadow: 0 3px 0 #174828; }
+button.save, #save-level:not(:disabled) { background: #e1b15a; color: var(--ink); box-shadow: 0 3px 0 #6a4a16; }
 button.on { outline: 2px solid var(--brass); }
+.is-hidden { display: none; }
+
+#builder-tools {
+  display: flex;
+  gap: 8px;
+  padding: 0 6px 8px;
+}
+
+#builder-tools.is-hidden { display: none; }
+
+#load-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background: rgba(16, 9, 5, 0.62);
+  padding: 20px;
+}
+
+#load-panel.is-hidden { display: none; }
+
+#load-panel .card { width: min(420px, 100%); }
+
+#load-list {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  margin: 8px 0 16px;
+  overflow: auto;
+}
+
+#load-list button {
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+}
+
+#load-empty { margin: 8px 0 16px; }
+#load-empty.is-hidden { display: none; }
 
 #stage-wrap {
   position: relative;

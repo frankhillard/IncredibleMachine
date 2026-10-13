@@ -1,6 +1,8 @@
-import { LEVELS } from "./levels.js";
+import { LEVELS as BUILTIN_LEVELS } from "./levels.js";
+import { levels as extraLevels } from "../extra_levels/index.js";
 import { PARTS, PART_ORDER } from "./parts.js";
 import { bodyAtPoint, createBody, localFromWorld } from "./physics.js";
+import { blankBuilderLevel, captureLevel, placeGoal, placeStart, sessionFromSaved } from "./builder.js";
 import {
   anchorFromPoint,
   createSession,
@@ -24,6 +26,7 @@ const dots = document.querySelector("#dots");
 const modal = document.querySelector("#modal");
 
 const state = {
+  levels: [...BUILTIN_LEVELS, ...extraLevels],
   index: 0,
   session: null,
   selected: null,
@@ -40,12 +43,14 @@ const state = {
   shake: 0,
   celebrated: false,
   cleared: loadCleared(),
+  building: false,
+  layer: "fixed",
 };
 
 const params = new URLSearchParams(location.search);
 const startId = Number(params.get("level"));
 if (startId) {
-  const found = LEVELS.findIndex((level) => level.id === startId);
+  const found = state.levels.findIndex((level) => level.id === startId);
   if (found >= 0) state.index = found;
 }
 
@@ -135,7 +140,7 @@ function celebrate() {
   saveCleared();
   renderDots();
   const level = state.session.level;
-  const last = state.index >= LEVELS.length - 1;
+  const last = state.index >= state.levels.length - 1;
   document.querySelector("#modal-title").textContent = level.sandbox ? "The bench is yours" : "It works";
   document.querySelector("#modal-copy").textContent = last
     ? "Every table on the bench has run. Build another one, or replay this one."
@@ -145,8 +150,9 @@ function celebrate() {
 }
 
 function loadLevel(index) {
-  state.index = (index + LEVELS.length) % LEVELS.length;
-  state.session = createSession(LEVELS[state.index]);
+  state.building = false;
+  state.index = (index + state.levels.length) % state.levels.length;
+  state.session = createSession(state.levels[state.index]);
   state.selected = null;
   state.selectedRope = null;
   state.tool = null;
@@ -157,11 +163,20 @@ function loadLevel(index) {
   state.celebrated = false;
   modal.classList.add("hidden");
   const level = state.session.level;
+  const puzzles = BUILTIN_LEVELS.filter((item) => !item.sandbox).length;
   document.querySelector("#level-kicker").textContent = level.sandbox
     ? "Open bench"
-    : `Machine ${level.id} of ${LEVELS.length - 1}`;
+    : level.id > 11
+      ? `Extra level ${level.id}`
+      : `Machine ${level.id} of ${puzzles}`;
   document.querySelector("#level-name").textContent = level.name;
   document.querySelector("#hint").textContent = level.hint;
+  document.querySelector("#build").classList.remove("on");
+  document.querySelector("#save-level").disabled = true;
+  document.querySelector("#load-level").disabled = true;
+  document.querySelector("#builder-tools").classList.add("is-hidden");
+  document.querySelector("#load-panel").classList.add("is-hidden");
+  document.querySelector("#shelf-help").textContent = "Drag onto the felt. Scroll or Q / E to rotate. Delete removes.";
   renderTray();
   renderDots();
 }
@@ -169,44 +184,60 @@ function loadLevel(index) {
 function renderTray() {
   tray.innerHTML = "";
   const level = state.session.level;
-  const types = PART_ORDER.filter((type) => level.inventory.some((item) => item.type === type));
-  for (const type of types) {
-    const def = PARTS[type];
-    const button = document.createElement("button");
-    button.className = "part";
-    button.type = "button";
-    if (state.tool === type) button.classList.add("selected");
-    const icon = document.createElement("canvas");
-    icon.width = 72;
-    icon.height = 52;
-    paintIcon(icon, type);
-    const count = document.createElement("span");
-    count.className = "count";
-    count.textContent = String(remaining(type));
-    const name = document.createElement("span");
-    name.className = "part-name";
-    name.textContent = def.name;
-    button.append(icon, name, count);
-    button.title = def.blurb;
-    button.disabled = remaining(type) <= 0 && state.tool !== type;
-    button.addEventListener("pointerdown", (event) => beginTray(event, type));
-    tray.append(button);
-  }
+  const types = state.building
+    ? ["start", "goal", ...PART_ORDER]
+    : PART_ORDER.filter((type) => level.inventory.some((item) => item.type === type));
+  for (const type of types) addTrayButton(type);
+}
+
+function addTrayButton(type) {
+  const special = type === "start" || type === "goal";
+  const def = special
+    ? {
+        name: type === "start" ? "Start" : "End",
+        blurb: type === "start" ? "Where the ball begins." : "The zone the ball must stay in.",
+      }
+    : PARTS[type];
+  const button = document.createElement("button");
+  button.className = "part";
+  button.type = "button";
+  if (state.tool === type) button.classList.add("selected");
+  const icon = document.createElement("canvas");
+  icon.width = 72;
+  icon.height = 52;
+  paintIcon(icon, type);
+  const count = document.createElement("span");
+  count.className = "count";
+  count.textContent = String(stock(type));
+  const name = document.createElement("span");
+  name.className = "part-name";
+  name.textContent = def.name;
+  button.append(icon, name, count);
+  button.title = def.blurb;
+  button.disabled = stock(type) <= 0 && state.tool !== type;
+  button.addEventListener("pointerdown", (event) => beginTray(event, type));
+  tray.append(button);
 }
 
 function renderDots() {
   dots.innerHTML = "";
-  for (const level of LEVELS) {
+  for (const level of state.levels) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "dot";
-    if (level.id === state.session.level.id) button.classList.add("current");
+    if (!state.building && level.id === state.session.level.id) button.classList.add("current");
     if (state.cleared.has(level.id)) button.classList.add("cleared");
     button.textContent = String(level.id);
     button.title = level.name;
-    button.addEventListener("click", () => loadLevel(LEVELS.indexOf(level)));
+    button.addEventListener("click", () => loadLevel(state.levels.indexOf(level)));
     dots.append(button);
   }
+}
+
+function stock(type) {
+  if (type === "start") return state.session.world.bodies.some((body) => body.builderKind === "start") ? 0 : 1;
+  if (type === "goal") return state.session.world.bodies.some((body) => body.builderKind === "goal-pin") ? 0 : 1;
+  return remaining(type);
 }
 
 function remaining(type) {
@@ -216,7 +247,7 @@ function remaining(type) {
 }
 
 function beginTray(event, type) {
-  if (state.session.playing || remaining(type) <= 0) return;
+  if (state.session.playing || stock(type) <= 0) return;
   event.preventDefault();
   state.tool = type;
   state.selected = null;
@@ -288,13 +319,24 @@ function onPointerUp(event) {
   const point = worldOf(event);
   if (state.drag?.fromTray && state.drag.type !== "rope" && state.drag.moved && inside(point)) {
     const angle = state.placing?.angle || 0;
-    const body = spawnPart(state.session, state.drag.type, clamp(point.x, 36, 924), clamp(point.y, 36, 508), angle);
-    if (body) {
-      state.selected = body;
+    const x = clamp(point.x, 36, 924);
+    const y = clamp(point.y, 36, 508);
+    if (state.drag.type === "start") {
+      placeStart(state.session, x, y);
       sfx("place");
-      burst(body.x, body.y, ["#ffe7a3", "#fff"], 6);
+    } else if (state.drag.type === "goal") {
+      placeGoal(state.session, x, y, angle);
+      sfx("place");
+    } else {
+      const body = spawnPart(state.session, state.drag.type, x, y, angle);
+      if (body) {
+        if (state.building) body.builderLayer = state.layer;
+        state.selected = body;
+        sfx("place");
+        burst(body.x, body.y, ["#ffe7a3", "#fff"], 6);
+      }
     }
-    state.tool = remaining(state.drag.type) > 0 ? state.drag.type : null;
+    state.tool = stock(state.drag.type) > 0 ? state.drag.type : null;
   }
   state.drag = null;
   state.placing = null;
@@ -313,13 +355,24 @@ function placeRopeClick(point) {
   state.ropeAnchor = null;
   if (rope) {
     state.selectedRope = rope;
+    if (state.building) rope.builderLayer = state.layer;
     sfx("place");
   }
-  state.tool = remaining("rope") > 0 ? "rope" : null;
+  state.tool = stock("rope") > 0 ? "rope" : null;
   renderTray();
 }
 
 function preview(type, x, y, angle) {
+  if (type === "start") {
+    const body = createBody({ ...PARTS.ball, x, y, angle, partType: "ball", style: "ball" });
+    body.builderKind = "start";
+    return body;
+  }
+  if (type === "goal") {
+    const body = createBody({ shape: "circle", r: 14, x, y, angle, style: "goalpin" });
+    body.builderKind = "goal-pin";
+    return body;
+  }
   const def = PARTS[type];
   const slot = state.session.inventory.find((item) => item.type === type && item.remaining > 0);
   return createBody({
@@ -471,7 +524,10 @@ function bind() {
   });
   document.querySelector("#play").addEventListener("click", startPlay);
   document.querySelector("#stop").addEventListener("click", stopPlay);
-  document.querySelector("#reset").addEventListener("click", () => loadLevel(state.index));
+  document.querySelector("#reset").addEventListener("click", () => {
+    if (state.building) enterBuilder();
+    else loadLevel(state.index);
+  });
   document.querySelector("#hint-btn").addEventListener("click", () => {
     state.showHint = !state.showHint;
     document.querySelector("#hint-btn").classList.toggle("on", state.showHint);
@@ -487,12 +543,136 @@ function bind() {
   });
   document.querySelector("#prev").addEventListener("click", () => loadLevel(state.index - 1));
   document.querySelector("#next").addEventListener("click", () => loadLevel(state.index + 1));
+  document.querySelector("#build").addEventListener("click", () => {
+    if (state.building) loadLevel(state.index);
+    else enterBuilder();
+  });
+  document.querySelector("#save-level").addEventListener("click", saveBuiltLevel);
+  document.querySelector("#load-level").addEventListener("click", openLoadPanel);
+  document.querySelector("#load-cancel").addEventListener("click", closeLoadPanel);
+  document.querySelector("#layer-fixed").addEventListener("click", () => setLayer("fixed"));
+  document.querySelector("#layer-player").addEventListener("click", () => setLayer("solution"));
   document.querySelector("#replay").addEventListener("click", () => {
     modal.classList.add("hidden");
     stopPlay();
   });
   document.querySelector("#modal-next").addEventListener("click", () => {
     modal.classList.add("hidden");
-    if (state.index < LEVELS.length - 1) loadLevel(state.index + 1);
+    if (state.index < state.levels.length - 1) loadLevel(state.index + 1);
   });
+}
+
+function enterBuilder() {
+  state.building = true;
+  state.layer = "fixed";
+  state.session = createSession(blankBuilderLevel());
+  state.selected = null;
+  state.selectedRope = null;
+  state.tool = null;
+  state.placing = null;
+  state.ropeAnchor = null;
+  state.drag = null;
+  state.showHint = false;
+  state.celebrated = false;
+  modal.classList.add("hidden");
+  closeLoadPanel();
+  showBuilderChrome();
+}
+
+function showBuilderChrome() {
+  const level = state.session.level;
+  document.querySelector("#level-kicker").textContent = "Workshop";
+  document.querySelector("#level-name").textContent = level.name;
+  document.querySelector("#hint").textContent = level.hint;
+  document.querySelector("#build").classList.add("on");
+  document.querySelector("#save-level").disabled = false;
+  document.querySelector("#load-level").disabled = false;
+  document.querySelector("#builder-tools").classList.remove("is-hidden");
+  document.querySelector("#shelf-help").textContent = "Fixed stays in the level. Player parts are given to the player. Click Build again to leave.";
+  setLayer(state.layer || "fixed");
+  renderTray();
+  renderDots();
+}
+
+function closeLoadPanel() {
+  document.querySelector("#load-panel").classList.add("is-hidden");
+}
+
+async function openLoadPanel() {
+  if (!state.building || state.session.playing) return;
+  const list = document.querySelector("#load-list");
+  const empty = document.querySelector("#load-empty");
+  list.innerHTML = "";
+  let levels = [];
+  try {
+    const response = await fetch("/api/levels");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not list levels.");
+    for (const item of data.levels || []) {
+      const mod = await import(`../extra_levels/${item.file}?v=${Date.now()}`);
+      if (mod.level) levels.push(mod.level);
+    }
+  } catch {
+    levels = state.levels.filter((level) => Number(level.id) > 11);
+  }
+  levels.sort((a, b) => a.id - b.id);
+  empty.classList.toggle("is-hidden", levels.length > 0);
+  for (const level of levels) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = `${level.name}  ·  level${level.id}.js`;
+    button.addEventListener("click", () => {
+      state.building = true;
+      state.layer = "fixed";
+      state.session = sessionFromSaved(level);
+      state.selected = null;
+      state.selectedRope = null;
+      state.tool = null;
+      state.placing = null;
+      state.ropeAnchor = null;
+      state.drag = null;
+      state.showHint = false;
+      state.celebrated = false;
+      modal.classList.add("hidden");
+      closeLoadPanel();
+      showBuilderChrome();
+      state.session.message = `Loaded extra_levels/level${level.id}.js`;
+    });
+    list.append(button);
+  }
+  document.querySelector("#load-panel").classList.remove("is-hidden");
+}
+
+function setLayer(layer) {
+  state.layer = layer;
+  document.querySelector("#layer-fixed").classList.toggle("on", layer === "fixed");
+  document.querySelector("#layer-player").classList.toggle("on", layer === "solution");
+}
+
+async function saveBuiltLevel() {
+  if (!state.building || state.session.playing) return;
+  const captured = captureLevel(state.session);
+  if (captured.error) {
+    state.session.message = captured.error;
+    return;
+  }
+  const button = document.querySelector("#save-level");
+  button.disabled = true;
+  try {
+    const response = await fetch("/api/levels", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(captured.level),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not save the level.");
+    state.levels.push(data.level);
+    loadLevel(state.levels.length - 1);
+    state.session.message = `Saved extra_levels/${data.file}`;
+  } catch (error) {
+    state.session.message = error.message === "Failed to fetch"
+      ? "Save needs npm start so the level can be written."
+      : error.message;
+    if (state.building) button.disabled = false;
+  }
 }

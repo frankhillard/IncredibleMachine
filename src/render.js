@@ -16,6 +16,7 @@ export function drawWorld(ctx, session, view) {
   drawGoals(ctx, session, time);
   if (view.showHint) drawHints(ctx, session, time);
   if (view.placing) {
+    if (view.placing.builderKind === "goal-pin") drawGoalZone(ctx, view.placing, 0.45);
     if (view.placing.meta?.fan) drawWind(ctx, view.placing, time, false);
     drawBody(ctx, view.placing, time, false, 0.55);
   }
@@ -134,7 +135,8 @@ export function drawBody(ctx, body, time, playing, alpha) {
   ctx.translate(body.x, body.y);
   ctx.rotate(body.angle || 0);
   const style = body.style || body.partType;
-  if (body.shape === "circle" && style !== "scamp") {
+  if (style === "goalpin") drawGoalPin(ctx, body);
+  else if (body.shape === "circle" && style !== "scamp") {
     if (style === "ball") drawBall(ctx, body);
     else if (style === "weight") drawWeight(ctx, body);
     else if (style === "balloon") drawBalloon(ctx, body, time);
@@ -152,6 +154,28 @@ export function drawBody(ctx, body, time, playing, alpha) {
   else if (style === "block") drawBlock(ctx, body);
   else if (style === "basket" || style === "brick" || style === "frame") drawBeam(ctx, body, style);
   else drawBoard(ctx, body, style);
+  if (body.builderKind === "start") {
+    ctx.save();
+    ctx.rotate(-(body.angle || 0));
+    ctx.fillStyle = "#fff8ea";
+    ctx.font = "900 14px Nunito, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("S", 0, 1);
+    ctx.restore();
+  }
+  if (body.builderLayer === "solution") {
+    ctx.strokeStyle = "#9fd4ff";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    if (body.shape === "circle") {
+      ctx.beginPath();
+      ctx.arc(0, 0, (body.r || 16) + 6, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.strokeRect(-body.hw - 5, -body.hh - 5, body.hw * 2 + 10, body.hh * 2 + 10);
+    }
+  }
   ctx.restore();
 }
 
@@ -573,9 +597,63 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+function drawGoalPin(ctx, body) {
+  ctx.fillStyle = "#f2c14e";
+  ctx.beginPath();
+  ctx.arc(0, 0, body.r || 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#6a4318";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = "#2a1c14";
+  ctx.font = "900 13px Nunito, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("E", 0, 1);
+}
+
+function drawGoalZone(ctx, pin, alpha) {
+  ctx.save();
+  ctx.translate(pin.x, pin.y);
+  ctx.rotate(pin.angle || 0);
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = "#ffe7a3";
+  ctx.fillStyle = "rgba(255, 214, 90, 0.16)";
+  ctx.lineWidth = 3;
+  ctx.setLineDash([7, 6]);
+  roundRect(ctx, -90, -32, 180, 64, 10);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function paintIcon(canvas, type) {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (type === "start") {
+    ctx.fillStyle = "#e24b3c";
+    ctx.beginPath();
+    ctx.arc(36, 28, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff8ea";
+    ctx.font = "900 14px Nunito, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("S", 36, 29);
+    return;
+  }
+  if (type === "goal") {
+    ctx.strokeStyle = "#e1b15a";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(12, 14, 48, 24);
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#f2c14e";
+    ctx.beginPath();
+    ctx.arc(36, 26, 8, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
   if (type === "rope") {
     ctx.strokeStyle = "#6a4324";
     ctx.lineWidth = 3;
