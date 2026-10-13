@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
+    "stop": "node scripts/stop-server.mjs",
     "test": "node tests/engine.js && node tests/solve.js"
   }
 }
