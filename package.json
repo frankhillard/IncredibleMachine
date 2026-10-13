@@ -1,0 +1,9 @@
+{
+  "name": "contraption",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node tests/engine.js && node tests/solve.js"
+  }
+}
