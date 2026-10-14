@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)));
 const extraDir = path.join(root, "extra_levels");
+const host = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT) || 8080;
 
 const types = {
@@ -38,8 +39,8 @@ const server = http.createServer((req, res) => {
   serveStatic(url.pathname, req, res);
 });
 
-server.listen(port, () => {
-  console.log(`Contraption workshop at http://localhost:${port}`);
+server.listen(port, host, () => {
+  console.log(`Contraption workshop listening on http://${host}:${port}`);
 });
 
 function saveLevel(payload, res) {
