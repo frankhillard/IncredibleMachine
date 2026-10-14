@@ -128,6 +128,39 @@ button.on { outline: 2px solid var(--brass); }
 #load-empty { margin: 8px 0 16px; }
 #load-empty.is-hidden { display: none; }
 
+#role-menu {
+  position: fixed;
+  z-index: 6;
+  display: grid;
+  gap: 6px;
+  width: 160px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+#role-menu.is-hidden { display: none; }
+
+#role-menu label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#role-choice {
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+}
+
 #stage-wrap {
   position: relative;
   padding: 14px;

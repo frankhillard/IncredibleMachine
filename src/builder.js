@@ -5,12 +5,13 @@ import { createSession, moveBody, spawnPart } from "./session.js";
 
 const GOAL_W = 180;
 const GOAL_H = 64;
+export const MARKER_ROLES = ["ball", "balloon", "domino"];
 
 export function blankBuilderLevel() {
   return {
     id: "builder",
     name: "Level builder",
-    hint: "Place Start and End. Fixed parts stay nailed down. Player parts are handed over, and where you put them becomes the hint. Save level writes the next file.",
+    hint: "Place Start and End, then choose ball, balloon, or domino.",
     builder: true,
     fixtures: frame(),
     decors: [],
@@ -33,7 +34,7 @@ export function sessionFromSaved(level) {
   });
   for (const body of session.world.bodies) {
     if (body.style === "frame") continue;
-    if (body.partType === "ball" && body.role === "hero") {
+    if (body.role === "hero" && body.partType) {
       body.builderKind = "start";
       body.builderLayer = "fixed";
       body.locked = false;
@@ -54,7 +55,9 @@ export function sessionFromSaved(level) {
         }),
       );
       pin.builderKind = "goal-pin";
+      pin.goalRole = session.level.goal?.match || "ball";
       body.builderKind = "goal";
+      body.goalRole = pin.goalRole;
       body.follow = { id: pin.id, lx: 0, ly: 0, angle: 0 };
       continue;
     }
@@ -75,33 +78,41 @@ export function sessionFromSaved(level) {
   return session;
 }
 
-export function placeStart(session, x, y) {
-  const existing = session.world.bodies.find((body) => body.builderKind === "start");
-  if (existing) {
+export function placeStart(session, x, y, role) {
+  const existing = session.world.bodies.find((body) => body.alive && body.builderKind === "start");
+  const kind = normalizeRole(role || existing?.partType || "ball");
+  if (existing && existing.partType === kind) {
     moveBody(existing, x, y, existing.angle);
     return existing;
   }
+  const angle = existing?.angle || 0;
   const body = addBody(
     session.world,
     createBody({
-      ...PARTS.ball,
+      ...PARTS[kind],
       x,
       y,
-      angle: 0,
-      partType: "ball",
+      angle,
+      partType: kind,
       role: "hero",
       locked: false,
     }),
   );
   body.builderKind = "start";
   body.builderLayer = "fixed";
+  if (existing) replaceBody(session, existing, body);
   return body;
 }
 
-export function placeGoal(session, x, y, angle = 0) {
-  const pin = session.world.bodies.find((body) => body.builderKind === "goal-pin");
+export function placeGoal(session, x, y, angle = 0, role) {
+  const pin = session.world.bodies.find((body) => body.alive && body.builderKind === "goal-pin");
+  const kind = normalizeRole(role || pin?.goalRole || session.level.goal?.match || "ball");
+  session.level.goal = goalFor(kind, session.level.goal);
   if (pin) {
     moveBody(pin, x, y, angle);
+    pin.goalRole = kind;
+    const zone = session.world.bodies.find((body) => body.builderKind === "goal");
+    if (zone) zone.goalRole = kind;
     return pin;
   }
   const pinBody = addBody(
@@ -118,6 +129,7 @@ export function placeGoal(session, x, y, angle = 0) {
     }),
   );
   pinBody.builderKind = "goal-pin";
+  pinBody.goalRole = kind;
   const zone = addBody(
     session.world,
     createBody({
@@ -133,6 +145,7 @@ export function placeGoal(session, x, y, angle = 0) {
     }),
   );
   zone.builderKind = "goal";
+  zone.goalRole = kind;
   zone.follow = { id: pinBody.id, lx: 0, ly: 0, angle: 0 };
   return pinBody;
 }
@@ -197,11 +210,11 @@ export function captureLevel(session) {
   return {
     level: {
       name: "Level",
-      hint: "Bring the ball to the end.",
+      hint: `Bring the ${markerRole(session)} to the end.`,
       fixtures,
       decors: [],
       inventory: inventoryFrom(solution, playerRopes),
-      goal: defaultGoal(),
+      goal: goalFor(markerRole(session), session.level.goal),
       solution,
       time: 12,
     },
@@ -209,14 +222,36 @@ export function captureLevel(session) {
 }
 
 function defaultGoal() {
+  return goalFor("ball");
+}
+
+function goalFor(match, previous) {
+  const kind = normalizeRole(match);
   return {
     type: "contain",
-    match: "ball",
+    match: kind,
     zone: "goal",
     mode: "any",
-    hold: 0.3,
-    maxSpeed: 360,
+    hold: previous?.hold ?? 0.3,
+    maxSpeed: kind === "balloon" ? 1200 : 360,
   };
+}
+
+function markerRole(session) {
+  const pin = session.world.bodies.find((body) => body.alive && body.builderKind === "goal-pin");
+  return normalizeRole(pin?.goalRole || session.level.goal?.match || "ball");
+}
+
+function normalizeRole(role) {
+  return MARKER_ROLES.includes(role) ? role : "ball";
+}
+
+function replaceBody(session, previous, next) {
+  for (const rope of session.world.constraints) {
+    if (rope.a === previous) rope.a = next;
+    if (rope.b === previous) rope.b = next;
+  }
+  session.world.bodies = session.world.bodies.filter((body) => body !== previous);
 }
 
 function ownsFixture(body) {

@@ -176,6 +176,7 @@ function loadLevel(index) {
   document.querySelector("#load-level").disabled = true;
   document.querySelector("#builder-tools").classList.add("is-hidden");
   document.querySelector("#load-panel").classList.add("is-hidden");
+  closeRoleMenu();
   document.querySelector("#shelf-help").textContent = "Drag onto the felt. Scroll or Q / E to rotate. Delete removes.";
   renderTray();
   renderDots();
@@ -317,6 +318,8 @@ function onPointerMove(event) {
 
 function onPointerUp(event) {
   const point = worldOf(event);
+  const dragged = state.drag?.body;
+  const marker = dragged?.builderKind === "start" ? "start" : dragged?.builderKind === "goal-pin" ? "goal" : null;
   if (state.drag?.fromTray && state.drag.type !== "rope" && state.drag.moved && inside(point)) {
     const angle = state.placing?.angle || 0;
     const x = clamp(point.x, 36, 924);
@@ -324,9 +327,11 @@ function onPointerUp(event) {
     if (state.drag.type === "start") {
       placeStart(state.session, x, y);
       sfx("place");
+      openRoleMenu(event, "start");
     } else if (state.drag.type === "goal") {
       placeGoal(state.session, x, y, angle);
       sfx("place");
+      openRoleMenu(event, "goal");
     } else {
       const body = spawnPart(state.session, state.drag.type, x, y, angle);
       if (body) {
@@ -337,6 +342,8 @@ function onPointerUp(event) {
       }
     }
     state.tool = stock(state.drag.type) > 0 ? state.drag.type : null;
+  } else if (marker && state.building && !state.session.playing) {
+    openRoleMenu(event, marker);
   }
   state.drag = null;
   state.placing = null;
@@ -489,6 +496,10 @@ function bind() {
   canvas.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointerdown", (event) => {
+    if (event.target.closest && event.target.closest("#role-menu")) return;
+    closeRoleMenu();
+  });
   canvas.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     if (!state.session.playing) removeSelected();
@@ -502,7 +513,8 @@ function bind() {
     { passive: false },
   );
   window.addEventListener("keydown", (event) => {
-    if (event.target.matches("input, textarea")) return;
+    if (event.key === "Escape") closeRoleMenu();
+    if (event.target.matches("input, textarea, select")) return;
     if (event.code === "Space") {
       event.preventDefault();
       if (state.session.playing) stopPlay();
@@ -550,7 +562,16 @@ function bind() {
   document.querySelector("#save-level").addEventListener("click", saveBuiltLevel);
   document.querySelector("#load-level").addEventListener("click", openLoadPanel);
   document.querySelector("#load-cancel").addEventListener("click", closeLoadPanel);
-  document.querySelector("#layer-fixed").addEventListener("click", () => setLayer("fixed"));
+  document.querySelector("#role-choice").addEventListener("change", (event) => {
+    const role = event.currentTarget.value;
+    if (state.roleTarget === "start") {
+      const start = state.session.world.bodies.find((body) => body.builderKind === "start");
+      if (start) placeStart(state.session, start.x, start.y, role);
+    } else if (state.roleTarget === "goal") {
+      const pin = state.session.world.bodies.find((body) => body.builderKind === "goal-pin");
+      if (pin) placeGoal(state.session, pin.x, pin.y, pin.angle, role);
+    }
+  });
   document.querySelector("#layer-player").addEventListener("click", () => setLayer("solution"));
   document.querySelector("#replay").addEventListener("click", () => {
     modal.classList.add("hidden");
@@ -576,10 +597,12 @@ function enterBuilder() {
   state.celebrated = false;
   modal.classList.add("hidden");
   closeLoadPanel();
+  closeRoleMenu();
   showBuilderChrome();
 }
 
 function showBuilderChrome() {
+  closeRoleMenu();
   const level = state.session.level;
   document.querySelector("#level-kicker").textContent = "Workshop";
   document.querySelector("#level-name").textContent = level.name;
@@ -596,6 +619,26 @@ function showBuilderChrome() {
 
 function closeLoadPanel() {
   document.querySelector("#load-panel").classList.add("is-hidden");
+}
+
+function openRoleMenu(event, target) {
+  state.roleTarget = target;
+  const menu = document.querySelector("#role-menu");
+  const select = document.querySelector("#role-choice");
+  document.querySelector("#role-label").textContent = target === "start" ? "Start object" : "End watches";
+  const current = target === "start"
+    ? state.session.world.bodies.find((body) => body.builderKind === "start")?.partType
+    : state.session.world.bodies.find((body) => body.builderKind === "goal-pin")?.goalRole;
+  select.value = ["ball", "balloon", "domino"].includes(current) ? current : "ball";
+  menu.style.left = `${Math.min(event.clientX + 12, window.innerWidth - 180)}px`;
+  menu.style.top = `${Math.min(event.clientY + 12, window.innerHeight - 92)}px`;
+  menu.classList.remove("is-hidden");
+  select.focus();
+}
+
+function closeRoleMenu() {
+  state.roleTarget = null;
+  document.querySelector("#role-menu")?.classList.add("is-hidden");
 }
 
 async function openLoadPanel() {
