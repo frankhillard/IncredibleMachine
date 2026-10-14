@@ -157,8 +157,12 @@ export function drawBody(ctx, body, time, playing, alpha) {
   if (body.builderKind === "start") {
     ctx.save();
     ctx.rotate(-(body.angle || 0));
+    ctx.fillStyle = "#2a1c14";
+    ctx.beginPath();
+    ctx.arc(0, 0, 9, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = "#fff8ea";
-    ctx.font = "900 14px Nunito, sans-serif";
+    ctx.font = "900 12px Nunito, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("S", 0, 1);
@@ -610,6 +614,9 @@ function drawGoalPin(ctx, body) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("E", 0, 1);
+  ctx.font = "800 11px Nunito, sans-serif";
+  ctx.fillStyle = "#fff6e4";
+  ctx.fillText(body.goalRole || "ball", 0, (body.r || 14) + 14);
 }
 
 function drawGoalZone(ctx, pin, alpha) {
