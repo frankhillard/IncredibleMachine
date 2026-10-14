@@ -8,7 +8,20 @@ A contraption puzzle in the spirit of Rube Goldberg machines. Parts stay where y
 npm start
 ```
 
-Open [http://localhost:8080](http://localhost:8080).
+Open [http://localhost:8080](http://localhost:8080). The server listens on `0.0.0.0`.
+
+Run it in a container:
+
+```bash
+docker build -t contraption .
+docker run --rm -p 8080:8080 contraption
+```
+
+Saved levels live in `extra_levels`. Mount that folder to keep them:
+
+```bash
+docker run --rm -p 8080:8080 -v "$(pwd)/extra_levels:/app/extra_levels" contraption
+```
 
 Find the process that is listening:
 
