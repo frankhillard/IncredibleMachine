@@ -174,6 +174,7 @@ function loadLevel(index) {
   document.querySelector("#build").classList.remove("on");
   document.querySelector("#save-level").disabled = true;
   document.querySelector("#load-level").disabled = true;
+  syncModeButtons();
   document.querySelector("#builder-tools").classList.add("is-hidden");
   document.querySelector("#load-panel").classList.add("is-hidden");
   closeRoleMenu();
@@ -529,7 +530,7 @@ function bind() {
       state.placing = null;
       renderTray();
     }
-    if (event.key === "h" || event.key === "H") {
+    if ((event.key === "h" || event.key === "H") && !state.building) {
       state.showHint = !state.showHint;
       document.querySelector("#hint-btn").classList.toggle("on", state.showHint);
     }
@@ -572,6 +573,7 @@ function bind() {
       if (pin) placeGoal(state.session, pin.x, pin.y, pin.angle, role);
     }
   });
+  document.querySelector("#layer-fixed").addEventListener("click", () => setLayer("fixed"));
   document.querySelector("#layer-player").addEventListener("click", () => setLayer("solution"));
   document.querySelector("#replay").addEventListener("click", () => {
     modal.classList.add("hidden");
@@ -610,6 +612,7 @@ function showBuilderChrome() {
   document.querySelector("#build").classList.add("on");
   document.querySelector("#save-level").disabled = false;
   document.querySelector("#load-level").disabled = false;
+  syncModeButtons();
   document.querySelector("#builder-tools").classList.remove("is-hidden");
   document.querySelector("#shelf-help").textContent = "Fixed stays in the level. Player parts are given to the player. Click Build again to leave.";
   setLayer(state.layer || "fixed");
@@ -684,6 +687,13 @@ async function openLoadPanel() {
     list.append(button);
   }
   document.querySelector("#load-panel").classList.remove("is-hidden");
+}
+
+function syncModeButtons() {
+  document.querySelector("#hint-btn").classList.toggle("is-hidden", state.building);
+  document.querySelector("#hint-btn").classList.toggle("on", state.showHint && !state.building);
+  document.querySelector("#load-level").classList.toggle("is-hidden", !state.building);
+  document.querySelector("#save-level").classList.toggle("is-hidden", !state.building);
 }
 
 function setLayer(layer) {
