@@ -2,6 +2,8 @@
 
 A contraption puzzle in the spirit of Rube Goldberg machines. Parts stay where you nail them, loose pieces tumble, and the fun is the chain reaction in between.
 
+![](incredible_machine.png)
+
 ## Play
 
 ```bash
